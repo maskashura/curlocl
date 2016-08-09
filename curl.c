@@ -46,8 +46,6 @@ void CurlSqueeze(CurlCtx *ctx, void *output)
     CurlTransform(ctx);
 }
 
-int run_test(OCLCtx *OCL, OCLCurlCtx *OCLCurl, int8_t in);
-
 int main(int argc, char **argv)
 {
 	OCLCtx OCL;
@@ -117,29 +115,9 @@ int main(int argc, char **argv)
 	FreeOCLCurlCtx(&OCLCurl);
 	FreeOCLCtx(&OCL);
 	
-	/*
-	OCLCtx OCL;
-	OCLCurlCtx OCLCurl;
-	
-	InitOpenCLCtx(&OCL);
-	InitOCLCurlCtx(&OCLCurl, &OCL);
-	
-	int ret = run_test(&OCL, &OCLCurl, -1);
-	printf("Running Test on [-1]: %s %d\n",  ret == 0 ? "PASS": "FAIL", ret);
-	
-	ret = run_test(&OCL, &OCLCurl, 0);
-	printf("Running Test on [0]: %s %d\n",   ret == 0 ? "PASS": "FAIL", ret);
-	
-	ret = run_test(&OCL, &OCLCurl, 1);
-	printf("Running Test on [1]: %s %d\n", ret == 0 ? "PASS": "FAIL", ret);
-	
-	FreeOCLCurlCtx(&OCLCurl);
-	FreeOCLCtx(&OCL);
-	*/
-	
 	FinalTX[2673] = 0x00;
 	
-	printf("Final TX: %s\n", FinalTX);
+	printf("%s", FinalTX);
 	
 	return(0);
 	
@@ -149,16 +127,18 @@ int main(int argc, char **argv)
 int MineTX(OCLCtx *OCL, OCLCurlCtx *OCLCurl, int8_t *TXTail, int8_t *TXMid, char *NonceTrytes)
 {
 	cl_int retval;
+	double Seconds;
 	bool Found = false;
+	TIME_TYPE Begin, End;
 	cl_uint Difficulty = 13;
 	int8_t Output[HASH_SIZE] = { 0 };
-	size_t GlobalThreads = 4194304, LocalThreads = 64, GlobalOffset = 0;
+	size_t GlobalThreads = 8192, LocalThreads = 64, GlobalOffset = 0;
 	
 	retval = clEnqueueWriteBuffer(OCL->OCLQueue, OCLCurl->InBuffer, CL_TRUE, 0, sizeof(cl_char) * HASH_SIZE * 2, TXTail, 0, NULL, NULL);
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clEnqueueWriteBuffer to fill input buffer.\n", retval);
+		PrintErr("Error %d when calling clEnqueueWriteBuffer to fill input buffer.\n", retval);
 		return(-1);
 	}
 	
@@ -166,7 +146,7 @@ int MineTX(OCLCtx *OCL, OCLCurlCtx *OCLCurl, int8_t *TXTail, int8_t *TXMid, char
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clEnqueueWriteBuffer to fill input buffer.\n", retval);
+		PrintErr("Error %d when calling clEnqueueWriteBuffer to fill input buffer.\n", retval);
 		return(-1);
 	}
 	
@@ -174,7 +154,7 @@ int MineTX(OCLCtx *OCL, OCLCurlCtx *OCLCurl, int8_t *TXTail, int8_t *TXMid, char
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clSetKernelArg for output buffer.\n", retval);
+		PrintErr("Error %d when calling clSetKernelArg for output buffer.\n", retval);
 		return(-1);
 	}
 	
@@ -182,7 +162,7 @@ int MineTX(OCLCtx *OCL, OCLCurlCtx *OCLCurl, int8_t *TXTail, int8_t *TXMid, char
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clSetKernelArg for input buffer.\n", retval);
+		PrintErr("Error %d when calling clSetKernelArg for input buffer.\n", retval);
 		return(-1);
 	}
 	
@@ -190,7 +170,7 @@ int MineTX(OCLCtx *OCL, OCLCurlCtx *OCLCurl, int8_t *TXTail, int8_t *TXMid, char
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clSetKernelArg for midstate buffer.\n", retval);
+		PrintErr("Error %d when calling clSetKernelArg for midstate buffer.\n", retval);
 		return(-1);
 	}
 	
@@ -198,9 +178,12 @@ int MineTX(OCLCtx *OCL, OCLCurlCtx *OCLCurl, int8_t *TXTail, int8_t *TXMid, char
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clSetKernelArg for difficulty.\n", retval);
+		PrintErr("Error %d when calling clSetKernelArg for difficulty.\n", retval);
 		return(-1);
 	}
+	
+	
+	Begin = MinerGetCurTime();
 	
 	do
 	{
@@ -208,7 +191,7 @@ int MineTX(OCLCtx *OCL, OCLCurlCtx *OCLCurl, int8_t *TXTail, int8_t *TXMid, char
 		
 		if(retval != CL_SUCCESS)
 		{
-			printf("Error %d when calling clEnqueueNDRangeKernel for kernel.\n", retval);
+			PrintErr("Error %d when calling clEnqueueNDRangeKernel for kernel.\n", retval);
 			return(-1);
 		}
 		
@@ -216,7 +199,7 @@ int MineTX(OCLCtx *OCL, OCLCurlCtx *OCLCurl, int8_t *TXTail, int8_t *TXMid, char
 		
 		if(retval != CL_SUCCESS)
 		{
-			printf("Error %d when calling clEnqueueReadBuffer to fetch results.\n", retval);
+			PrintErr("Error %d when calling clEnqueueReadBuffer to fetch results.\n", retval);
 			return(-1);
 		}
 		
@@ -226,96 +209,13 @@ int MineTX(OCLCtx *OCL, OCLCurlCtx *OCLCurl, int8_t *TXTail, int8_t *TXMid, char
 		for(int i = 0; i < HASH_SIZE && !Found; ++i) Found = Output[i] != 0;
 	} while(!Found);
 	
+	End = MinerGetCurTime();
+	
+	Seconds = SecondsElapsed(Begin, End);
+	
+	PrintErr("%lu hashes done in %.2f seconds for a hashrate of %.2fH/s.\n", GlobalThreads, Seconds, ((double)GlobalThreads) / Seconds);
+	
 	TritsToTrytes(NonceTrytes, Output, 81);
 	
 	return(0);
 }
-	
-int8_t TestVector0[] = { -1, 0, -1, 1, -1, -1, 0, 0, -1, -1, 0, 1, -1, 1, 0, 0, 1, 1, 1, -1, 1, -1, 1, 0, 0, -1, 0, -1, 1, 1, 1, 0, 1, 0, 0, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 0, 1, 0, -1, -1, -1, 0, -1, 1, 1, 1, -1, -1, 1, 1, 1, 1, 1, 0, -1, 0, 0, 1, 0, -1, 1, 0, 0, 0, 1, 1, 1, -1, -1, -1, 0, 0, -1, 1, 0, 1, 1, 0, 0, 1, -1, 1, 0, 1, 1, 1, 1, -1, -1, 0, 0, 0, -1, -1, 1, 0, 0, -1, 0, 1, 1, -1, -1, -1, 0, 1, -1, 1, -1, 1, 1, 1, 0, -1, -1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, -1, 1, -1, 1, 1, 1, 0, -1, 1, 1, -1, 0, 0, 1, 0, 1, 1, -1, 1, -1, -1, -1, -1, -1, -1, 0, 1, 1, 0, -1, -1, 0, 1, 0, 0, -1, -1, -1, 1, 0, 0, 1, -1, -1, 0, 1, 0, 0, 0, 1, -1, 1, -1, 1, -1, 1, 0, 1, 0, 1, 1, 0, 1, -1, 1, 0, -1, 0, -1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, -1, 1, -1, 1, 1, 0, -1, 0, 0, -1, 1, -1, -1, 0, -1, 0, 1, -1, -1, 1, 1, 0, -1, 0};
-int8_t TestVector1[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-int8_t TestVector2[] = { -1, 1, 1, 0, -1, -1, 0, 1, 1, -1, 1, -1, 1, -1, 1, 0, 0, 0, 0, -1, 0, 1, 0, -1, 1, 1, 0, -1, 1, -1, 1, -1, 0, -1, 0, 1, 0, -1, 1, 0, -1, 0, -1, -1, -1, 1, 1, -1, 1, -1, 0, 0, 0, 1, -1, 0, -1, 1, 0, -1, -1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, 0, 0, -1, 1, 1, 1, 0, 1, 0, 1, 0, -1, -1, 0, -1, 0, -1, -1, 1, 1, -1, -1, 0, 0, 0, 0, 0, 1, 1, 1, -1, 1, 1, -1, 1, 1, 1, 0, 0, 1, 0, -1, -1, 0, 0, -1, -1, -1, -1, 1, -1, 1, 0, 0, -1, -1, 1, 0, -1, 1, -1, -1, 0, 0, 1, -1, 1, -1, 1, -1, -1, -1, 0, 1, 1, -1, 1, 1, 0, 0, -1, 0, 1, -1, 1, 0, 1, -1, 1, 1, 0, -1, 0, -1, -1, 0, 0, 1, -1, -1, 1, -1, -1, 0, -1, 1, 0, 1, -1, -1, 1, 1, -1, 1, -1, 0, 1, 0, 1, -1, 1, 1, 0, 1, -1, -1, 1, 0, 1, -1, -1, -1, -1, 0, -1, 1, 0, -1, 1, 0, 1, 0, -1, 1, -1, 0, 1, 0, 1, -1, -1, -1, 0, -1, 1, 1, 0, -1, 1, 0, 0, -1, 1, -1, 0, 1, 1, -1, 0, 0, 0, 0};
-
-
-int run_test(OCLCtx *OCL, OCLCurlCtx *OCLCurl, int8_t in)
-{
-	CurlCtx ctx;
-	cl_int retval;
-	int8_t input[HASH_SIZE], output[HASH_SIZE];
-	size_t GlobalThreads = 16777216, LocalThreads = 64;
-	
-	if (in < -1 || in > 1)
-	{
-		fprintf(stderr, "Invalid input\n");
-		return(-1);
-	}
-	
-	memset(input, in, HASH_SIZE);
-	memset(output, 0x00, HASH_SIZE);
-	
-	//CurlInit(&ctx);
-	//Curl(&ctx, input, HASH_SIZE);
-	//CurlSqueeze(&ctx, output);
-	
-	retval = clEnqueueWriteBuffer(OCL->OCLQueue, OCLCurl->InBuffer, CL_TRUE, 0, sizeof(cl_char) * HASH_SIZE, input, 0, NULL, NULL);
-	
-	if(retval != CL_SUCCESS)
-	{
-		printf("Error %d when calling clEnqueueWriteBuffer to fill input buffer.\n", retval);
-		return(-1);
-	}
-	
-	retval = clSetKernelArg(OCLCurl->CurlKernel, 0, sizeof(cl_mem), &OCLCurl->OutBuffer);
-	
-	if(retval != CL_SUCCESS)
-	{
-		printf("Error %d when calling clSetKernelArg for output buffer.\n", retval);
-		return(-1);
-	}
-	
-	retval = clSetKernelArg(OCLCurl->CurlKernel, 1, sizeof(cl_mem), &OCLCurl->InBuffer);
-	
-	if(retval != CL_SUCCESS)
-	{
-		printf("Error %d when calling clSetKernelArg for input buffer.\n", retval);
-		return(-1);
-	}
-	
-	TIME_TYPE Begin, End;
-	
-	Begin = MinerGetCurTime();
-	
-	retval = clEnqueueNDRangeKernel(OCL->OCLQueue, OCLCurl->CurlKernel, 1, NULL, &GlobalThreads, &LocalThreads, 0, NULL, NULL);
-	
-	if(retval != CL_SUCCESS)
-	{
-		printf("Error %d when calling clEnqueueNDRangeKernel for kernel.\n", retval);
-		return(-1);
-	}
-	
-	retval = clEnqueueReadBuffer(OCL->OCLQueue, OCLCurl->OutBuffer, CL_TRUE, 0, sizeof(cl_char) * HASH_SIZE, output, 0, NULL, NULL);
-	
-	if(retval != CL_SUCCESS)
-	{
-		printf("Error %d when calling clEnqueueReadBuffer to fetch results.\n", retval);
-		return(-1);
-	}
-	
-	clFinish(OCL->OCLQueue);
-	
-	End = MinerGetCurTime();
-	
-	double seconds = SecondsElapsed(Begin, End);
-	
-	printf("16777216 hashes done in %.2f seconds for a hashrate of %.2fH/s.\n", seconds, 16777216.0 / seconds);
-	
-	switch(in)
-	{
-		case -1:
-			return(memcmp(TestVector0, output, HASH_SIZE));
-		case 0:
-			return(memcmp(TestVector1, output, HASH_SIZE));
-		case 1:
-			return(memcmp(TestVector2, output, HASH_SIZE));
-	}
-}
-

@@ -1,9 +1,9 @@
 // Copyright 2016 Wolf (Wolf9466)
 
-#include <stdio.h>
 #include <unistd.h>			// for sleep()
 #include <CL/cl.h>
 #include "curlocl.h"
+#include "curlutil.h"
 
 int InitOpenCLCtx(OCLCtx *ctx)
 {
@@ -17,7 +17,7 @@ int InitOpenCLCtx(OCLCtx *ctx)
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clGetPlatformIDs for number of platforms.\n", retval);
+		PrintErr("Error %d when calling clGetPlatformIDs for number of platforms.\n", retval);
 		return(-1);
 	}
 	
@@ -26,7 +26,7 @@ int InitOpenCLCtx(OCLCtx *ctx)
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clGetPlatformIDs for platform ID information.\n", retval);
+		PrintErr("Error %d when calling clGetPlatformIDs for platform ID information.\n", retval);
 		free(PlatformIDList);
 		return(-1);
 	}
@@ -38,7 +38,7 @@ int InitOpenCLCtx(OCLCtx *ctx)
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clGetDeviceIDs for number of devices.\n", retval);
+		PrintErr("Error %d when calling clGetDeviceIDs for number of devices.\n", retval);
 		return(-1);
 	}
 	
@@ -48,7 +48,7 @@ int InitOpenCLCtx(OCLCtx *ctx)
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clGetDeviceIDs for device ID information.\n", retval);
+		PrintErr("Error %d when calling clGetDeviceIDs for device ID information.\n", retval);
 		free(DeviceIDList);
 		return(-1);
 	}
@@ -60,7 +60,7 @@ int InitOpenCLCtx(OCLCtx *ctx)
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clCreateContext.\n", retval);
+		PrintErr("Error %d when calling clCreateContext.\n", retval);
 		return(-1);
 	}
 	
@@ -68,7 +68,7 @@ int InitOpenCLCtx(OCLCtx *ctx)
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clCreateCommandQueueWithProperties.\n", retval);
+		PrintErr("Error %d when calling clCreateCommandQueueWithProperties.\n", retval);
 		return(-1);
 	}
 	
@@ -105,7 +105,7 @@ int InitOCLCurlCtx(OCLCurlCtx *ctx, OCLCtx *OCL)
 	
 	if(!len)
 	{
-		printf("Error loading OpenCL source file curl.cl.\n");
+		PrintErr("Error loading OpenCL source file curl.cl.\n");
 		return(-1);
 	}
 	
@@ -113,7 +113,7 @@ int InitOCLCurlCtx(OCLCurlCtx *ctx, OCLCtx *OCL)
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clCreateProgramWithSource on the contents of %s.\n", retval, "curl.cl");
+		PrintErr("Error %d when calling clCreateProgramWithSource on the contents of %s.\n", retval, "curl.cl");
 		return(-1);
 	}
 	
@@ -121,13 +121,13 @@ int InitOCLCurlCtx(OCLCurlCtx *ctx, OCLCtx *OCL)
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clBuildProgram.\n", retval);
+		PrintErr("Error %d when calling clBuildProgram.\n", retval);
 		
 		retval = clGetProgramBuildInfo(ctx->OCLProgram, OCL->DeviceID, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
 	
 		if(retval != CL_SUCCESS)
 		{
-			printf("Error %d when calling clGetProgramBuildInfo for length of build log output.\n", retval);
+			PrintErr("Error %d when calling clGetProgramBuildInfo for length of build log output.\n", retval);
 			return(-1);
 		}
 		
@@ -137,11 +137,11 @@ int InitOCLCurlCtx(OCLCurlCtx *ctx, OCLCtx *OCL)
 		
 		if(retval != CL_SUCCESS)
 		{
-			printf("Error %d when calling clGetProgramBuildInfo for build log.\n", retval);
+			PrintErr("Error %d when calling clGetProgramBuildInfo for build log.\n", retval);
 			return(-1);
 		}
 		
-		printf("Build Log:\n%s\n", BuildLog);
+		PrintErr("Build Log:\n%s\n", BuildLog);
 		
 		free(BuildLog);
 		
@@ -153,7 +153,7 @@ int InitOCLCurlCtx(OCLCurlCtx *ctx, OCLCtx *OCL)
 		retval = clGetProgramBuildInfo(ctx->OCLProgram, OCL->DeviceID, CL_PROGRAM_BUILD_STATUS, sizeof(cl_build_status), &status, NULL);
 		if(retval != CL_SUCCESS)
 		{
-			printf("Error %d when calling clGetProgramBuildInfo for status of build.\n", retval);
+			PrintErr("Error %d when calling clGetProgramBuildInfo for status of build.\n", retval);
 			return(-1);
 		}
 		sleep(1);
@@ -163,7 +163,7 @@ int InitOCLCurlCtx(OCLCurlCtx *ctx, OCLCtx *OCL)
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clGetProgramBuildInfo for length of build log output.\n", retval);
+		PrintErr("Error %d when calling clGetProgramBuildInfo for length of build log output.\n", retval);
 		return(-1);
 	}
 	
@@ -173,11 +173,11 @@ int InitOCLCurlCtx(OCLCurlCtx *ctx, OCLCtx *OCL)
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clGetProgramBuildInfo for build log.\n", retval);
+		PrintErr("Error %d when calling clGetProgramBuildInfo for build log.\n", retval);
 		return(-1);
 	}
 	
-	printf("Build Log:\n%s\n", BuildLog);
+	PrintErr("Build Log:\n%s\n", BuildLog);
 	
 	free(BuildLog);
 	free(KernelSource);
@@ -186,7 +186,7 @@ int InitOCLCurlCtx(OCLCurlCtx *ctx, OCLCtx *OCL)
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clCreateKernel for kernel %s.\n", retval, "curl");
+		PrintErr("Error %d when calling clCreateKernel for kernel %s.\n", retval, "curl");
 		return(-1);
 	}
 	
@@ -194,7 +194,7 @@ int InitOCLCurlCtx(OCLCurlCtx *ctx, OCLCtx *OCL)
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clCreateBuffer to create input buffer.\n", retval);
+		PrintErr("Error %d when calling clCreateBuffer to create input buffer.\n", retval);
 		return(-1);
 	}
 	
@@ -202,7 +202,7 @@ int InitOCLCurlCtx(OCLCurlCtx *ctx, OCLCtx *OCL)
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clCreateBuffer to create midstate buffer.\n", retval);
+		PrintErr("Error %d when calling clCreateBuffer to create midstate buffer.\n", retval);
 		return(-1);
 	}
 	
@@ -210,7 +210,7 @@ int InitOCLCurlCtx(OCLCurlCtx *ctx, OCLCtx *OCL)
 	
 	if(retval != CL_SUCCESS)
 	{
-		printf("Error %d when calling clCreateBuffer to create output buffer.\n", retval);
+		PrintErr("Error %d when calling clCreateBuffer to create output buffer.\n", retval);
 		return(-1);
 	}
 }

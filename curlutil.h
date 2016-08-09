@@ -4,6 +4,7 @@
 #define __CURLUTIL_H
 
 #include <time.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 
