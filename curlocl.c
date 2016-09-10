@@ -7,7 +7,7 @@
 
 int InitOpenCLCtx(OCLCtx *ctx)
 {
-	const cl_queue_properties CommandQueueProperties[] = { 0, 0, 0 };
+	//const cl_queue_properties CommandQueueProperties[] = { 0, 0, 0 };
 	cl_platform_id *PlatformIDList;
 	cl_device_id *DeviceIDList;
 	cl_uint entries;
@@ -64,11 +64,21 @@ int InitOpenCLCtx(OCLCtx *ctx)
 		return(-1);
 	}
 	
+	/*
 	ctx->OCLQueue = clCreateCommandQueueWithProperties(ctx->OCLContext, ctx->DeviceID, CommandQueueProperties, &retval);
 	
 	if(retval != CL_SUCCESS)
 	{
 		PrintErr("Error %d when calling clCreateCommandQueueWithProperties.\n", retval);
+		return(-1);
+	}
+	*/
+	
+	ctx->OCLQueue = clCreateCommandQueue(ctx->OCLContext, ctx->DeviceID, 0, &retval);
+	
+	if(retval != CL_SUCCESS)
+	{
+		PrintErr("Error %d when calling clCreateCommandQueue.\n", retval);
 		return(-1);
 	}
 	
